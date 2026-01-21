@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import logo from './assets/logo.png';
 
 const API_URL = 'http://localhost:3001/api';
+
+
 
 // --- Login Component ---
 function Login() {
@@ -23,8 +26,14 @@ function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
+    <div className="flex items-center justify-center h-screen bg-gray-100 relative">
+      <div className="absolute top-4 left-4 flex items-center gap-2">
+         <img src={logo} alt="D-Hub CRM Logo" className="h-64" />
+      </div>
       <form onSubmit={handleLogin} className="p-8 bg-white rounded shadow-md w-96">
+        <div className="flex justify-center mb-4">
+          <img src={logo} alt="D-Hub CRM Logo" className="h-64" />
+        </div>
         <h1 className="mb-4 text-2xl font-bold text-center text-blue-600">D-Hub CRM</h1>
         {error && <div className="p-2 mb-4 text-white bg-red-500 rounded" data-testid="error-msg">{error}</div>}
         <input 
