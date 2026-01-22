@@ -14,9 +14,11 @@ app.use(express.json());
 
 // --- Database Setup ---
 db.exec(`
+  DROP TABLE IF EXISTS customers;
+  DROP TABLE IF EXISTS deals;
   CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);
-  CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT, email TEXT, status TEXT);
-  CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY, title TEXT, amount INTEGER, stage TEXT);
+  CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT, email TEXT, status TEXT, phone TEXT, company TEXT);
+  CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY, title TEXT, amount INTEGER, stage TEXT, currency TEXT DEFAULT 'USD', customer_id INTEGER);
 `);
 
 // --- Seeder ---
@@ -29,9 +31,15 @@ app.post('/api/seed', (req, res) => {
   insertUser.run('admin', 'password123'); // Simple plain text for this demo
 
   // Create Customers
-  const insertCust = db.prepare('INSERT INTO customers (name, email, status) VALUES (?, ?, ?)');
+  const insertCust = db.prepare('INSERT INTO customers (name, email, status, phone, company) VALUES (?, ?, ?, ?, ?)');
   for (let i = 0; i < 50; i++) {
-    insertCust.run(faker.person.fullName(), faker.internet.email(), faker.helpers.arrayElement(['Active', 'Inactive', 'Lead']));
+    insertCust.run(
+      faker.person.fullName(), 
+      faker.internet.email(), 
+      faker.helpers.arrayElement(['Active', 'Inactive', 'Lead']),
+      faker.phone.number(),
+      faker.company.name()
+    );
   }
 
   // Create Deals (for Drag & Drop)
@@ -68,6 +76,35 @@ app.get('/api/customers', (req, res) => {
   const count = db.prepare('SELECT COUNT(*) as count FROM customers').get();
   
   res.json({ data: rows, total: count.count, page });
+});
+
+app.post('/api/customers', (req, res) => {
+  const { name, email, status, phone, company } = req.body;
+  const info = db.prepare('INSERT INTO customers (name, email, status, phone, company) VALUES (?, ?, ?, ?, ?)').run(name, email, status, phone, company);
+  res.json({ id: info.lastInsertRowid });
+});
+
+app.put('/api/customers/:id', (req, res) => {
+  const { name, email, status, phone, company } = req.body;
+  // Dynamic update query
+  const updates = [];
+  const params = [];
+  if (name) { updates.push('name = ?'); params.push(name); }
+  if (email) { updates.push('email = ?'); params.push(email); }
+  if (status) { updates.push('status = ?'); params.push(status); }
+  if (phone) { updates.push('phone = ?'); params.push(phone); }
+  if (company) { updates.push('company = ?'); params.push(company); }
+  
+  if (updates.length > 0) {
+    params.push(req.params.id);
+    db.prepare(`UPDATE customers SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  }
+  res.json({ success: true });
+});
+
+app.delete('/api/customers/:id', (req, res) => {
+  db.prepare('DELETE FROM customers WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
 });
 
 app.get('/api/deals', (req, res) => {
