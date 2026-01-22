@@ -337,13 +337,161 @@ function Customers() {
   );
 }
 
+// --- Add Deal Modal ---
+function AddDealModal({ isOpen, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    company: '',
+    customer_name: '',
+    product: '',
+    amount: '',
+    created_date: '',
+    closed_date: '',
+    employee_name: '',
+    notes: ''
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h3 className="text-lg font-bold">Add New Deal</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 max-h-[80vh] overflow-y-auto">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Company</label>
+              <input required className="w-full mt-1 p-2 border rounded" value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Customer Name</label>
+              <input required className="w-full mt-1 p-2 border rounded" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Details (Product)</label>
+              <input required className="w-full mt-1 p-2 border rounded" value={formData.product} onChange={e => setFormData({ ...formData, product: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Amount ($)</label>
+              <input required type="number" className="w-full mt-1 p-2 border rounded" value={formData.amount} onChange={e => setFormData({ ...formData, amount: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Created Date</label>
+                  <input required type="date" className="w-full mt-1 p-2 border rounded" value={formData.created_date} onChange={e => setFormData({ ...formData, created_date: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Closed Date</label>
+                  <input required type="date" className="w-full mt-1 p-2 border rounded" value={formData.closed_date} onChange={e => setFormData({ ...formData, closed_date: e.target.value })} />
+                </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Employee Name</label>
+              <input required className="w-full mt-1 p-2 border rounded" value={formData.employee_name} onChange={e => setFormData({ ...formData, employee_name: e.target.value })} />
+            </div>
+             <div>
+              <label className="block text-sm font-medium text-gray-700">Notes</label>
+              <textarea className="w-full mt-1 p-2 border rounded" rows="3" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })}></textarea>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-6">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">Save Deal</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --- View Deal Details Modal ---
+function ViewDealModal({ deal, isOpen, onClose }) {
+  if (!isOpen || !deal) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h3 className="text-lg font-bold">Deal Details</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                     <label className="text-xs font-bold text-gray-500 uppercase">Company</label>
+                     <p className="font-medium text-gray-900">{deal.company}</p>
+                </div>
+                 <div>
+                     <label className="text-xs font-bold text-gray-500 uppercase">Customer</label>
+                     <p className="font-medium text-gray-900">{deal.customer_name}</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                 <div>
+                     <label className="text-xs font-bold text-gray-500 uppercase">Product</label>
+                     <p className="font-medium text-gray-900">{deal.product}</p>
+                </div>
+                 <div>
+                     <label className="text-xs font-bold text-gray-500 uppercase">Amount</label>
+                     <p className="font-medium text-green-600">${deal.amount}</p>
+                </div>
+            </div>
+             <div className="grid grid-cols-2 gap-4">
+                 <div>
+                     <label className="text-xs font-bold text-gray-500 uppercase">Created</label>
+                     <p className="text-sm text-gray-700">{deal.created_date}</p>
+                </div>
+                 <div>
+                     <label className="text-xs font-bold text-gray-500 uppercase">Closed</label>
+                     <p className="text-sm text-gray-700">{deal.closed_date}</p>
+                </div>
+            </div>
+            <div>
+                 <label className="text-xs font-bold text-gray-500 uppercase">Employee</label>
+                 <p className="text-sm text-gray-700">{deal.employee_name}</p>
+            </div>
+            <div>
+                 <label className="text-xs font-bold text-gray-500 uppercase">Notes</label>
+                 <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{deal.notes || 'No notes'}</p>
+            </div>
+        </div>
+        <div className="bg-gray-50 p-4 border-t flex justify-end">
+            <button onClick={onClose} className="px-4 py-2 bg-white border rounded hover:bg-gray-100 text-gray-700 font-medium">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Deals Pipeline (Drag and Drop) ---
 function Pipeline() {
   const [deals, setDeals] = useState([]);
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [viewDeal, setViewDeal] = useState(null);
   const stages = ['new', 'negotiation', 'won', 'lost'];
 
+  const fetchDeals = async () => {
+    try {
+        const res = await axios.get(`${API_URL}/deals`);
+        setDeals(res.data);
+    } catch(err) {
+        console.error("Error fetching deals", err);
+    }
+  }
+
   useEffect(() => {
-    axios.get(`${API_URL}/deals`).then(res => setDeals(res.data));
+    fetchDeals();
   }, []);
 
   const onDragEnd = async (result) => {
@@ -369,21 +517,46 @@ function Pipeline() {
     }
   };
 
+  const handleSaveDeal = async (newDeal) => {
+      try {
+          await axios.post(`${API_URL}/deals`, newDeal);
+          setAddModalOpen(false);
+          fetchDeals(); // Refresh list
+      } catch (err) {
+          console.error("Failed to create deal", err);
+          alert("Failed to create deal");
+      }
+  };
+
   return (
     <div className="p-6">
-      <h2 className="mb-4 text-xl font-bold">Deals Pipeline</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">Deals Pipeline</h2>
+        <button 
+            onClick={() => setAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
+        >
+            <Plus size={16} /> Add Deal
+        </button>
+      </div>
+
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto">
+        <div className="flex gap-4 overflow-x-auto pb-4">
           {stages.map(stage => (
             <Droppable key={stage} droppableId={stage}>
               {(provided) => (
                 <div 
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="p-4 bg-gray-100 rounded w-72 min-h-[400px]"
+                  className="p-4 bg-gray-100 rounded w-80 min-h-[400px] flex-shrink-0"
                   data-testid={`column-${stage}`}
                 >
-                  <h3 className="mb-4 font-bold uppercase text-gray-500">{stage}</h3>
+                  <h3 className="mb-4 font-bold uppercase text-gray-500 flex justify-between">
+                      {stage}
+                      <span className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">
+                          {deals.filter(d => d.stage === stage).length}
+                      </span>
+                  </h3>
                   {deals.filter(d => d.stage === stage).map((deal, index) => (
                     <Draggable key={deal.id} draggableId={deal.id.toString()} index={index}>
                       {(provided) => (
@@ -391,11 +564,22 @@ function Pipeline() {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="p-4 mb-2 bg-white rounded shadow cursor-move hover:bg-blue-50"
+                          className="p-4 mb-3 bg-white rounded shadow-sm border border-gray-200 hover:shadow-md transition-shadow group relative"
                           data-testid={`deal-${deal.id}`}
                         >
-                          <p className="font-semibold">{deal.title}</p>
-                          <p className="text-sm text-gray-500">${deal.amount}</p>
+                          <div className="pr-6">
+                              <p className="font-semibold text-gray-800">{deal.company}</p>
+                              <p className="text-sm text-gray-600 truncate">{deal.product}</p>
+                              <p className="text-sm font-bold text-green-600 mt-2">${deal.amount?.toLocaleString()}</p>
+                          </div>
+                          
+                          <button 
+                            onClick={() => setViewDeal(deal)}
+                            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="View Details"
+                          >
+                              <Plus size={18} />
+                          </button>
                         </div>
                       )}
                     </Draggable>
@@ -407,6 +591,18 @@ function Pipeline() {
           ))}
         </div>
       </DragDropContext>
+
+      <AddDealModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setAddModalOpen(false)} 
+        onSave={handleSaveDeal} 
+      />
+      
+      <ViewDealModal 
+        deal={viewDeal} 
+        isOpen={!!viewDeal} 
+        onClose={() => setViewDeal(null)} 
+      />
     </div>
   );
 }

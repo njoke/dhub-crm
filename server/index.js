@@ -13,11 +13,24 @@ app.use(cors());
 app.use(express.json());
 
 // --- Database Setup ---
-// --- Database Setup ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);
   CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT, email TEXT, status TEXT, phone TEXT, company TEXT);
-  CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY, title TEXT, amount INTEGER, stage TEXT, currency TEXT DEFAULT 'USD', customer_id INTEGER);
+  CREATE TABLE IF NOT EXISTS deals (
+    id INTEGER PRIMARY KEY, 
+    title TEXT, 
+    amount INTEGER, 
+    stage TEXT, 
+    currency TEXT DEFAULT 'USD', 
+    customer_id INTEGER,
+    company TEXT,
+    customer_name TEXT,
+    product TEXT,
+    created_date TEXT,
+    closed_date TEXT,
+    employee_name TEXT,
+    notes TEXT
+  );
 `);
 
 // --- Seeder ---
@@ -42,10 +55,21 @@ app.post('/api/seed', (req, res) => {
   }
 
   // Create Deals (for Drag & Drop)
-  const insertDeal = db.prepare('INSERT INTO deals (title, amount, stage) VALUES (?, ?, ?)');
+  const insertDeal = db.prepare('INSERT INTO deals (title, amount, stage, company, customer_name, product, created_date, closed_date, employee_name, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const stages = ['new', 'negotiation', 'won', 'lost'];
   for (let i = 0; i < 10; i++) {
-    insertDeal.run(faker.company.catchPhrase(), faker.number.int({ min: 1000, max: 50000 }), faker.helpers.arrayElement(stages));
+    insertDeal.run(
+      faker.company.catchPhrase(), 
+      faker.number.int({ min: 1000, max: 50000 }), 
+      faker.helpers.arrayElement(stages),
+      faker.company.name(),
+      faker.person.fullName(),
+      faker.commerce.productName(),
+      faker.date.past().toISOString().split('T')[0],
+      faker.date.future().toISOString().split('T')[0],
+      faker.person.fullName(),
+      faker.lorem.sentence()
+    );
   }
   
   res.json({ message: 'Database seeded!' });
@@ -133,6 +157,14 @@ app.delete('/api/customers/:id', (req, res) => {
 app.get('/api/deals', (req, res) => {
   const rows = db.prepare('SELECT * FROM deals').all();
   res.json(rows);
+});
+
+app.post('/api/deals', (req, res) => {
+  const { company, customer_name, product, amount, created_date, closed_date, employee_name, notes } = req.body;
+  const stage = 'new'; // Default stage
+  const info = db.prepare('INSERT INTO deals (title, amount, stage, company, customer_name, product, created_date, closed_date, employee_name, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(`${company} - ${product}`, amount, stage, company, customer_name, product, created_date, closed_date, employee_name, notes);
+  res.json({ id: info.lastInsertRowid });
 });
 
 app.put('/api/deals/:id', (req, res) => {
