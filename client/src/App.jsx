@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Trash2, Pencil, Plus, X, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import logo from './assets/logo.png';
@@ -338,7 +338,7 @@ function Customers() {
 }
 
 // --- Add Deal Modal ---
-function AddDealModal({ isOpen, onClose, onSave }) {
+function AddDealModal({ isOpen, onClose, onSave, editingDeal }) {
   const [formData, setFormData] = useState({
     company: '',
     customer_name: '',
@@ -349,6 +349,33 @@ function AddDealModal({ isOpen, onClose, onSave }) {
     employee_name: '',
     notes: ''
   });
+
+  // Update form when editing deal changes
+  useEffect(() => {
+    if (editingDeal) {
+      setFormData({
+        company: editingDeal.company || '',
+        customer_name: editingDeal.customer_name || '',
+        product: editingDeal.product || '',
+        amount: editingDeal.amount || '',
+        created_date: editingDeal.created_date || '',
+        closed_date: editingDeal.closed_date || '',
+        employee_name: editingDeal.employee_name || '',
+        notes: editingDeal.notes || ''
+      });
+    } else {
+      setFormData({
+        company: '',
+        customer_name: '',
+        product: '',
+        amount: '',
+        created_date: '',
+        closed_date: '',
+        employee_name: '',
+        notes: ''
+      });
+    }
+  }, [editingDeal, isOpen]);
 
   if (!isOpen) return null;
 
@@ -361,7 +388,7 @@ function AddDealModal({ isOpen, onClose, onSave }) {
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
         <div className="flex justify-between items-center p-4 border-b">
-          <h3 className="text-lg font-bold">Add New Deal</h3>
+          <h3 className="text-lg font-bold">{editingDeal ? 'Edit Deal' : 'Add New Deal'}</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X size={20} />
           </button>
@@ -391,7 +418,7 @@ function AddDealModal({ isOpen, onClose, onSave }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Closed Date</label>
-                  <input required type="date" className="w-full mt-1 p-2 border rounded" value={formData.closed_date} onChange={e => setFormData({ ...formData, closed_date: e.target.value })} />
+                  <input type="date" className="w-full mt-1 p-2 border rounded" value={formData.closed_date} onChange={e => setFormData({ ...formData, closed_date: e.target.value })} />
                 </div>
             </div>
             <div>
@@ -405,7 +432,7 @@ function AddDealModal({ isOpen, onClose, onSave }) {
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200">Cancel</button>
-            <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">Save Deal</button>
+            <button type="submit" className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700">{editingDeal ? 'Update Deal' : 'Save Deal'}</button>
           </div>
         </form>
       </div>
@@ -414,7 +441,7 @@ function AddDealModal({ isOpen, onClose, onSave }) {
 }
 
 // --- View Deal Details Modal ---
-function ViewDealModal({ deal, isOpen, onClose }) {
+function ViewDealModal({ deal, isOpen, onClose, onEdit }) {
   if (!isOpen || !deal) return null;
 
   return (
@@ -454,7 +481,7 @@ function ViewDealModal({ deal, isOpen, onClose }) {
                 </div>
                  <div>
                      <label className="text-xs font-bold text-gray-500 uppercase">Closed</label>
-                     <p className="text-sm text-gray-700">{deal.closed_date}</p>
+                     <p className="text-sm text-gray-700">{deal.closed_date || 'Not closed'}</p>
                 </div>
             </div>
             <div>
@@ -466,7 +493,10 @@ function ViewDealModal({ deal, isOpen, onClose }) {
                  <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">{deal.notes || 'No notes'}</p>
             </div>
         </div>
-        <div className="bg-gray-50 p-4 border-t flex justify-end">
+        <div className="bg-gray-50 p-4 border-t flex justify-between">
+            <button onClick={() => { onEdit(deal); onClose(); }} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-2">
+                <Pencil size={16} /> Edit
+            </button>
             <button onClick={onClose} className="px-4 py-2 bg-white border rounded hover:bg-gray-100 text-gray-700 font-medium">Close</button>
         </div>
       </div>
@@ -478,6 +508,7 @@ function ViewDealModal({ deal, isOpen, onClose }) {
 function Pipeline() {
   const [deals, setDeals] = useState([]);
   const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [editingDeal, setEditingDeal] = useState(null);
   const [viewDeal, setViewDeal] = useState(null);
   const stages = ['new', 'negotiation', 'won', 'lost'];
 
@@ -495,9 +526,52 @@ function Pipeline() {
   }, []);
 
   const onDragEnd = async (result) => {
-    if (!result.destination) return;
-    const { draggableId, destination } = result;
+    console.log("🔵 onDragEnd called", result);
+    
+    if (!result.destination) {
+      console.log("❌ No destination - drag cancelled");
+      return;
+    }
+    
+    const { draggableId, destination, source } = result;
     const newStage = destination.droppableId;
+    const oldStage = source.droppableId;
+    
+    console.log(`🟢 Dragging deal ${draggableId} from ${oldStage} to ${newStage}`);
+    
+    // If dropped in same position, do nothing
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      console.log("⚠️ Dropped in same position, no change");
+      return;
+    }
+    
+    const deal = deals.find(d => d.id.toString() === draggableId);
+    console.log("📦 Found deal:", deal);
+    
+    // Validate close date when moving to "won"
+    if (newStage === 'won' && !deal.closed_date) {
+      const closeDate = prompt("This deal requires a close date. Please enter the close date (YYYY-MM-DD):");
+      if (!closeDate) {
+        alert("Close date is required to mark deal as Won");
+        return;
+      }
+      
+      // Update deal with close date
+      try {
+        console.log("📅 Updating deal with close date:", closeDate);
+        await axios.put(`${API_URL}/deals/${draggableId}`, { 
+          stage: newStage,
+          closed_date: closeDate 
+        });
+        fetchDeals(); // Refresh to get updated data
+        return;
+      } catch (err) {
+        console.error("❌ Failed to update deal", err);
+        alert("Failed to update deal. Please try again.");
+        return;
+      }
+    }
+    
     const oldDeals = [...deals];
     
     // Optimistic UI Update
@@ -505,27 +579,50 @@ function Pipeline() {
       d.id.toString() === draggableId ? { ...d, stage: newStage } : d
     );
     setDeals(updatedDeals);
+    console.log("✅ Optimistic UI updated");
 
     // API Update
     try {
-      await axios.put(`${API_URL}/deals/${draggableId}`, { stage: newStage });
+      console.log(`🌐 Calling API: PUT /deals/${draggableId} with stage: ${newStage}`);
+      const response = await axios.put(`${API_URL}/deals/${draggableId}`, { stage: newStage });
+      console.log("✅ API call successful", response.data);
+      // Fetch fresh data from server to ensure UI is in sync
+      await fetchDeals();
+      console.log("🔄 Deals refreshed from server");
     } catch (err) {
-      console.error("Failed to update deal stage", err);
+      console.error("❌ Failed to update deal stage", err);
       // Revert on failure
       setDeals(oldDeals);
       alert("Failed to move deal. Please try again.");
     }
   };
 
-  const handleSaveDeal = async (newDeal) => {
+  const handleSaveDeal = async (dealData) => {
       try {
-          await axios.post(`${API_URL}/deals`, newDeal);
+          if (editingDeal) {
+              // Update existing deal
+              await axios.put(`${API_URL}/deals/${editingDeal.id}`, dealData);
+              setEditingDeal(null);
+          } else {
+              // Create new deal
+              await axios.post(`${API_URL}/deals`, dealData);
+          }
           setAddModalOpen(false);
           fetchDeals(); // Refresh list
       } catch (err) {
-          console.error("Failed to create deal", err);
-          alert("Failed to create deal");
+          console.error("Failed to save deal", err);
+          alert("Failed to save deal");
       }
+  };
+
+  const handleEdit = (deal) => {
+      setEditingDeal(deal);
+      setAddModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+      setAddModalOpen(false);
+      setEditingDeal(null);
   };
 
   return (
@@ -533,7 +630,7 @@ function Pipeline() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">Deals Pipeline</h2>
         <button 
-            onClick={() => setAddModalOpen(true)}
+            onClick={() => { setEditingDeal(null); setAddModalOpen(true); }}
             className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
         >
             <Plus size={16} /> Add Deal
@@ -563,18 +660,19 @@ function Pipeline() {
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          {...provided.dragHandleProps}
                           className="p-4 mb-3 bg-white rounded shadow-sm border border-gray-200 hover:shadow-md transition-shadow group relative"
                           data-testid={`deal-${deal.id}`}
                         >
-                          <div className="pr-6">
+                          <div className="pr-6" {...provided.dragHandleProps}>
                               <p className="font-semibold text-gray-800">{deal.company}</p>
                               <p className="text-sm text-gray-600 truncate">{deal.product}</p>
                               <p className="text-sm font-bold text-green-600 mt-2">${deal.amount?.toLocaleString()}</p>
                           </div>
                           
                           <button 
-                            onClick={() => setViewDeal(deal)}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setViewDeal(deal); }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                             className="absolute top-2 right-2 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                             title="View Details"
                           >
@@ -594,14 +692,16 @@ function Pipeline() {
 
       <AddDealModal 
         isOpen={isAddModalOpen} 
-        onClose={() => setAddModalOpen(false)} 
-        onSave={handleSaveDeal} 
+        onClose={handleCloseModal} 
+        onSave={handleSaveDeal}
+        editingDeal={editingDeal}
       />
       
       <ViewDealModal 
         deal={viewDeal} 
         isOpen={!!viewDeal} 
-        onClose={() => setViewDeal(null)} 
+        onClose={() => setViewDeal(null)}
+        onEdit={handleEdit}
       />
     </div>
   );

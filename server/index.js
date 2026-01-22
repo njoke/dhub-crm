@@ -168,8 +168,37 @@ app.post('/api/deals', (req, res) => {
 });
 
 app.put('/api/deals/:id', (req, res) => {
-  const { stage } = req.body;
-  db.prepare('UPDATE deals SET stage = ? WHERE id = ?').run(stage, req.params.id);
+  const { stage, company, customer_name, product, amount, created_date, closed_date, employee_name, notes } = req.body;
+  
+  // If only stage is provided, update stage only (for drag-and-drop)
+  if (stage && !company && !customer_name && !product) {
+    db.prepare('UPDATE deals SET stage = ? WHERE id = ?').run(stage, req.params.id);
+  } else {
+    // Full update (for edit functionality)
+    const updates = [];
+    const params = [];
+    
+    if (company) { updates.push('company = ?'); params.push(company); }
+    if (customer_name) { updates.push('customer_name = ?'); params.push(customer_name); }
+    if (product) { updates.push('product = ?'); params.push(product); }
+    if (amount !== undefined) { updates.push('amount = ?'); params.push(amount); }
+    if (created_date) { updates.push('created_date = ?'); params.push(created_date); }
+    if (closed_date !== undefined) { updates.push('closed_date = ?'); params.push(closed_date); }
+    if (employee_name) { updates.push('employee_name = ?'); params.push(employee_name); }
+    if (notes !== undefined) { updates.push('notes = ?'); params.push(notes); }
+    if (stage) { updates.push('stage = ?'); params.push(stage); }
+    
+    if (updates.length > 0) {
+      params.push(req.params.id);
+      const title = company && product ? `${company} - ${product}` : null;
+      if (title) {
+        updates.push('title = ?');
+        params.push(title);
+      }
+      db.prepare(`UPDATE deals SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    }
+  }
+  
   res.json({ success: true });
 });
 
