@@ -65,16 +65,16 @@ function Customers() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', status: 'Active', phone: '', company: '' });
 
-  const fetchCustomers = React.useCallback(async (page = data.page) => {
+  const fetchCustomers = async (page) => {
     try {
       const res = await axios.get(`${API_URL}/customers?page=${page}`);
       setData(res.data);
     } catch (err) {
       console.error(err);
     }
-  }, [data.page]);
+  };
 
-  useEffect(() => { fetchCustomers(1); }, [fetchCustomers]);
+  useEffect(() => { fetchCustomers(1); }, []);
 
   const resetForm = () => {
     setFormData({ name: '', email: '', status: 'Active', phone: '', company: '' });
@@ -103,11 +103,12 @@ function Customers() {
     try {
       if (editingId) {
         await axios.put(`${API_URL}/customers/${editingId}`, formData);
+        fetchCustomers(data.page);
       } else {
         await axios.post(`${API_URL}/customers`, formData);
+        fetchCustomers(1);
       }
       setModalOpen(false);
-      fetchCustomers();
     } catch (err) {
       console.error("Failed to save customer", err);
       alert("Failed to save customer");
@@ -118,7 +119,7 @@ function Customers() {
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
     try {
       await axios.delete(`${API_URL}/customers/${id}`);
-      fetchCustomers();
+      fetchCustomers(data.page);
     } catch (err) {
       console.error("Failed to delete customer", err);
       alert("Failed to delete customer");

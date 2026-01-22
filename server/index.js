@@ -72,7 +72,7 @@ app.get('/api/customers', (req, res) => {
   const limit = 10;
   const offset = (page - 1) * limit;
   
-  const rows = db.prepare('SELECT * FROM customers LIMIT ? OFFSET ?').all(limit, offset);
+  const rows = db.prepare('SELECT * FROM customers ORDER BY id DESC LIMIT ? OFFSET ?').all(limit, offset);
   const count = db.prepare('SELECT COUNT(*) as count FROM customers').get();
   
   res.json({ data: rows, total: count.count, page });
