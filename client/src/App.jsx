@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
-import { Trash2, Pencil, Plus, X } from 'lucide-react';
+import { Trash2, Pencil, Plus, X, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import logo from './assets/logo.png';
 
 const API_URL = 'http://localhost:3001/api';
@@ -64,10 +64,12 @@ function Customers() {
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', email: '', status: 'Active', phone: '', company: '' });
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' });
+  const [search, setSearch] = useState('');
 
-  const fetchCustomers = async (page) => {
+  const fetchCustomers = async (page, sortKey = sortConfig.key, sortDir = sortConfig.direction, searchTerm = search) => {
     try {
-      const res = await axios.get(`${API_URL}/customers?page=${page}`);
+      const res = await axios.get(`${API_URL}/customers?page=${page}&sortBy=${sortKey}&order=${sortDir}&search=${searchTerm}`);
       setData(res.data);
     } catch (err) {
       console.error(err);
@@ -106,7 +108,9 @@ function Customers() {
         fetchCustomers(data.page);
       } else {
         await axios.post(`${API_URL}/customers`, formData);
-        fetchCustomers(1);
+        // Reset to default sort (Newest) and page 1
+        setSortConfig({ key: 'id', direction: 'desc' });
+        fetchCustomers(1, 'id', 'desc');
       }
       setModalOpen(false);
     } catch (err) {
@@ -126,28 +130,61 @@ function Customers() {
     }
   };
 
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    fetchCustomers(1, key, direction, search); // Reset to page 1 on sort
+  };
+
+  const handleSearch = (e) => {
+    const term = e.target.value;
+    setSearch(term);
+    fetchCustomers(1, sortConfig.key, sortConfig.direction, term); // Search triggers fetch
+  };
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="inline ml-1" /> : <ArrowDown size={14} className="inline ml-1" />;
+  };
+
   return (
     <div className="p-6">
-      <div className="flex justify-between mb-4">
+      <div className="flex justify-between mb-4 items-center">
         <h2 className="text-xl font-bold">Customers</h2>
-        <button 
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700"
-          data-testid="add-customer-btn"
-        >
-          <Plus size={16} /> Add Customer
-        </button>
+        <div className="flex gap-4">
+           <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text"
+                placeholder="Search..."
+                className="pl-10 pr-4 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                value={search}
+                onChange={handleSearch}
+                data-testid="search-input"
+              />
+           </div>
+           <button 
+             onClick={handleOpenCreate}
+             className="flex items-center gap-2 px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700"
+             data-testid="add-customer-btn"
+           >
+             <Plus size={16} /> Add Customer
+           </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto bg-white border shadow rounded">
         <table className="w-full text-left" data-testid="customer-table">
           <thead className="bg-gray-100 border-b">
             <tr>
-              <th className="p-3">ID</th>
-              <th className="p-3">Name</th>
-              <th className="p-3">Company</th>
+              <th className="p-3 cursor-pointer hover:bg-gray-200" onClick={() => handleSort('id')}>ID {renderSortIcon('id')}</th>
+              <th className="p-3 cursor-pointer hover:bg-gray-200" onClick={() => handleSort('name')}>Name {renderSortIcon('name')}</th>
+              <th className="p-3 cursor-pointer hover:bg-gray-200" onClick={() => handleSort('company')}>Company {renderSortIcon('company')}</th>
               <th className="p-3">Contact</th>
-              <th className="p-3">Status</th>
+              <th className="p-3 cursor-pointer hover:bg-gray-200" onClick={() => handleSort('status')}>Status {renderSortIcon('status')}</th>
               <th className="p-3">Actions</th>
             </tr>
           </thead>

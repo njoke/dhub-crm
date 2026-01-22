@@ -13,9 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 // --- Database Setup ---
+// --- Database Setup ---
 db.exec(`
-  DROP TABLE IF EXISTS customers;
-  DROP TABLE IF EXISTS deals;
   CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);
   CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY, name TEXT, email TEXT, status TEXT, phone TEXT, company TEXT);
   CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY, title TEXT, amount INTEGER, stage TEXT, currency TEXT DEFAULT 'USD', customer_id INTEGER);
@@ -71,9 +70,33 @@ app.get('/api/customers', (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 10;
   const offset = (page - 1) * limit;
+
+  // Sorting logic
+  const { sortBy, order, search } = req.query;
+  const validColumns = ['id', 'name', 'company', 'status'];
+  const sortColumn = validColumns.includes(sortBy) ? sortBy : 'id';
+  const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
+
+  // Use COLLATE NOCASE for text columns to ensure "Antone" and "zeus" sort correctly
+  const collation = ['name', 'company', 'status'].includes(sortColumn) ? 'COLLATE NOCASE' : '';
   
-  const rows = db.prepare('SELECT * FROM customers ORDER BY id DESC LIMIT ? OFFSET ?').all(limit, offset);
-  const count = db.prepare('SELECT COUNT(*) as count FROM customers').get();
+  let query = 'SELECT * FROM customers';
+  let countQuery = 'SELECT COUNT(*) as count FROM customers';
+  const params = [];
+  const searchParams = [];
+
+  if (search) {
+    const whereClause = ' WHERE name LIKE ? OR company LIKE ?';
+    query += whereClause;
+    countQuery += whereClause;
+    searchParams.push(`%${search}%`, `%${search}%`);
+  }
+
+  // Combine params: search params first (WHERE), then limit/offset
+  query += ` ORDER BY ${sortColumn} ${collation} ${sortOrder} LIMIT ? OFFSET ?`;
+  
+  const rows = db.prepare(query).all(...searchParams, limit, offset);
+  const count = db.prepare(countQuery).get(...searchParams);
   
   res.json({ data: rows, total: count.count, page });
 });
